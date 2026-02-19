@@ -8,6 +8,8 @@ type GroundPool = {
 
 export function createGroundPool(): GroundPool {
   const { tileCount, tileLength, width, recycleZ, color } = appConfig.ground;
+  const tileOverlap = 0.25;
+  const tileStride = tileLength - tileOverlap;
 
   const group = new THREE.Group();
   const tileGeometry = new THREE.PlaneGeometry(width, tileLength, 1, 8);
@@ -16,12 +18,10 @@ export function createGroundPool(): GroundPool {
   const tiles = Array.from({ length: tileCount }, (_, index) => {
     const tile = new THREE.Mesh(tileGeometry, tileMaterial);
     tile.rotation.x = -Math.PI / 2;
-    tile.position.set(0, 0, -index * tileLength);
+    tile.position.set(0, 0, -index * tileStride);
     group.add(tile);
     return tile;
   });
-
-  const halfLoopDepth = tileCount * tileLength;
 
   return {
     group,
@@ -30,7 +30,10 @@ export function createGroundPool(): GroundPool {
       for (const tile of tiles) {
         tile.position.z += effectiveSpeed * delta;
         if (tile.position.z > recycleZ) {
-          tile.position.z -= halfLoopDepth;
+          const furthestBackZ = tiles.reduce((minZ, currentTile) => {
+            return Math.min(minZ, currentTile.position.z);
+          }, Infinity);
+          tile.position.z = furthestBackZ - tileStride;
         }
       }
     },
