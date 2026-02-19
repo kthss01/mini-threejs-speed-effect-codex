@@ -32,7 +32,6 @@ export const appConfig = {
   },
 
   environment: {
-    distanceScale: 1,
     seed: 1337,
     initRange: { near: 40, far: 220 },
     recycleThreshold: 10,
