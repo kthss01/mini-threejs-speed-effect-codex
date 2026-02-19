@@ -14,13 +14,10 @@ export const appConfig = {
     speedFovBoost: 12,
   },
   speed: {
-    min: 0,
-    max: 1,
-    initial: 0.45,
-    accelRate: 5,
-    brakeRate: 8,
-    baseWorldSpeed: 12,
-    inputStep: 0.08,
+    minKmh: 0,
+    maxKmh: 240,
+    initialKmh: 110,
+    maxWorldSpeed: 2.6,
   },
   ground: {
     tileCount: 12,
