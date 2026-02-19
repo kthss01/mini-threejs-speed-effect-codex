@@ -9,6 +9,7 @@ import { createEffectsController } from './effects/effects-controller';
 import { setupDebugControls } from './input/debugToggle';
 import { createSpeedHud } from './ui/speedHud';
 import { createEnvironmentManager } from './world/environmentManager';
+import { createVehicleLights } from './world/vehicleLights';
 
 const container = document.querySelector<HTMLElement>('#app');
 if (!container) throw new Error('Missing #app container');
@@ -24,6 +25,9 @@ const mapKmhToWorldSpeed = (kmh: number) => {
 const speedController = createSpeedController(mapKmhToWorldSpeed(appConfig.speed.initialKmh));
 const environment = createEnvironmentManager({ debugParallax: appConfig.debug.debugParallax });
 scene.add(environment.group);
+
+const vehicleLights = createVehicleLights();
+scene.add(vehicleLights.group);
 
 const effectsController = createEffectsController(scene, camera, {
   quality: 'medium',
@@ -81,6 +85,7 @@ const loop = createRenderLoop(renderer, scene, camera, (delta) => {
   const worldSpeed = speedController.getWorldSpeed();
   const streakBoost = Math.min(3.5, 1 + worldSpeed * 0.08);
   rig.update(delta, worldSpeed, targetTransform);
+  vehicleLights.update(camera);
   environment.update(delta, worldSpeed);
   effectsController.update(delta, worldSpeed * streakBoost);
   debug.update();
