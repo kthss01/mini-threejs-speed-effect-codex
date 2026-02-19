@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CAMERA_PRESETS, type CameraPresetName, type CameraRigPresetConfig } from './cameraPresets';
 
 /**
  * Camera tracking input.
@@ -12,15 +13,18 @@ export type CameraTargetTransform = {
 };
 
 type CameraRigPreset = {
-  followOffset: THREE.Vector3;
-  lookAheadDistance: number;
-  followStiffness: number;
-  rotationStiffness: number;
-  baseFov: number;
-  maxFov: number;
-  speedForMaxFov: number;
-  fovResponse: number;
-  shakeAmount: number;
+  offset: THREE.Vector3;
+  lookAtOffset: THREE.Vector3;
+  lookAhead: number;
+  springStrength: number;
+  damping: number;
+  fovRange: {
+    base: number;
+    max: number;
+    speedForMax: number;
+    response: number;
+  };
+  shakeScale: number;
   shakeFrequency: number;
 };
 
@@ -31,34 +35,7 @@ export type CameraRigFovDebugState = {
   actualFov: number;
 };
 
-type CameraRigPresetInput = keyof typeof CINEMATIC_CAMERA_PRESETS | Partial<CameraRigPreset>;
-
-const CINEMATIC_CAMERA_PRESETS = {
-  default: {
-    followOffset: new THREE.Vector3(0, 5, 14),
-    lookAheadDistance: 10,
-    followStiffness: 7,
-    rotationStiffness: 9,
-    baseFov: 60,
-    maxFov: 75,
-    speedForMaxFov: 10,
-    fovResponse: 5,
-    shakeAmount: 0.14,
-    shakeFrequency: 17,
-  },
-  action: {
-    followOffset: new THREE.Vector3(0, 4.6, 10.5),
-    lookAheadDistance: 13,
-    followStiffness: 9,
-    rotationStiffness: 11,
-    baseFov: 62,
-    maxFov: 82,
-    speedForMaxFov: 12,
-    fovResponse: 6,
-    shakeAmount: 0.22,
-    shakeFrequency: 22,
-  },
-} as const;
+type CameraRigPresetInput = CameraPresetName | Partial<CameraRigPresetConfig>;
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const ORIGIN = new THREE.Vector3(0, 0, 0);
@@ -92,7 +69,7 @@ export class CinematicCameraRig {
 
   constructor(camera: THREE.PerspectiveCamera, options?: CameraRigPresetInput) {
     this.camera = camera;
-    this.preset = this.resolvePreset(options ?? 'default');
+    this.preset = this.resolvePreset(options ?? 'fallback');
     this.reset();
   }
 
@@ -114,23 +91,25 @@ export class CinematicCameraRig {
     const fallbackPosition = optionalTransform?.position ?? ORIGIN;
     const fallbackForward = optionalTransform?.forward ?? DEFAULT_FORWARD;
 
-    this.currentPosition.copy(fallbackPosition).add(this.preset.followOffset);
+    this.currentPosition.copy(fallbackPosition).add(this.preset.offset);
     this.positionVelocity.set(0, 0, 0);
 
-    this.lookAtPosition.copy(fallbackPosition).addScaledVector(fallbackForward, this.preset.lookAheadDistance);
+    this.lookAtPosition.copy(fallbackPosition)
+      .add(this.preset.lookAtOffset)
+      .addScaledVector(fallbackForward, this.preset.lookAhead);
     this.currentLookAt.copy(this.lookAtPosition);
     this.cameraLookMatrix.lookAt(this.currentPosition, this.currentLookAt, WORLD_UP);
     this.currentQuaternion.setFromRotationMatrix(this.cameraLookMatrix);
 
     this.camera.position.copy(this.currentPosition);
     this.camera.quaternion.copy(this.currentQuaternion);
-    this.camera.fov = this.preset.baseFov;
+    this.camera.fov = this.preset.fovRange.base;
     this.camera.updateProjectionMatrix();
     this.elapsedTime = 0;
     this.shakeOffset.set(0, 0, 0);
     this.fovDebugState.speed = 0;
     this.fovDebugState.normalizedSpeed = 0;
-    this.fovDebugState.targetFov = this.preset.baseFov;
+    this.fovDebugState.targetFov = this.preset.fovRange.base;
     this.fovDebugState.actualFov = this.camera.fov;
   }
 
@@ -141,20 +120,22 @@ export class CinematicCameraRig {
   private updateFollowSpring(dt: number, targetTransform: CameraTargetTransform): void {
     this.resolveTargetOrientation(targetTransform);
 
-    this.rotatedOffset.copy(this.preset.followOffset).applyQuaternion(this.workingQuaternion);
+    this.rotatedOffset.copy(this.preset.offset).applyQuaternion(this.workingQuaternion);
     this.desiredPosition.copy(targetTransform.position).add(this.rotatedOffset);
-    this.smoothDampVector(this.currentPosition, this.desiredPosition, this.positionVelocity, this.preset.followStiffness, dt);
+    this.smoothDampVector(this.currentPosition, this.desiredPosition, this.positionVelocity, this.preset.springStrength, this.preset.damping, dt);
 
     this.workingForward.copy(targetTransform.forward).normalize();
-    this.lookAtPosition.copy(targetTransform.position).addScaledVector(this.workingForward, this.preset.lookAheadDistance);
-    this.currentLookAt.lerp(this.lookAtPosition, 1 - Math.exp(-this.preset.rotationStiffness * dt));
+    this.lookAtPosition.copy(targetTransform.position)
+      .add(this.preset.lookAtOffset)
+      .addScaledVector(this.workingForward, this.preset.lookAhead);
+    this.currentLookAt.lerp(this.lookAtPosition, 1 - Math.exp(-this.preset.springStrength * dt));
   }
 
   private updateFov(dt: number, speed: number): void {
-    const speedRatio = THREE.MathUtils.clamp(speed / this.preset.speedForMaxFov, 0, 1);
+    const speedRatio = THREE.MathUtils.clamp(speed / this.preset.fovRange.speedForMax, 0, 1);
     const easedSpeed = speedRatio * speedRatio * (3 - 2 * speedRatio);
-    const targetFov = THREE.MathUtils.lerp(this.preset.baseFov, this.preset.maxFov, easedSpeed);
-    const blend = 1 - Math.exp(-this.preset.fovResponse * dt);
+    const targetFov = THREE.MathUtils.lerp(this.preset.fovRange.base, this.preset.fovRange.max, easedSpeed);
+    const blend = 1 - Math.exp(-this.preset.fovRange.response * dt);
 
     this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, blend);
     this.camera.updateProjectionMatrix();
@@ -166,7 +147,7 @@ export class CinematicCameraRig {
   }
 
   private updateShake(speed: number): void {
-    const intensity = THREE.MathUtils.clamp(speed / this.preset.speedForMaxFov, 0, 1) * this.preset.shakeAmount;
+    const intensity = THREE.MathUtils.clamp(speed / this.preset.fovRange.speedForMax, 0, 1) * this.preset.shakeScale;
     const t = this.elapsedTime * this.preset.shakeFrequency;
 
     this.shakeOffset.set(Math.sin(t) * intensity, Math.cos(t * 1.37) * intensity * 0.5, 0);
@@ -180,24 +161,27 @@ export class CinematicCameraRig {
 
     this.cameraLookMatrix.lookAt(this.camera.position, this.currentLookAt, WORLD_UP);
     this.desiredQuaternion.setFromRotationMatrix(this.cameraLookMatrix);
-    this.currentQuaternion.slerp(this.desiredQuaternion, 1 - Math.exp(-this.preset.rotationStiffness * dt));
+    this.currentQuaternion.slerp(this.desiredQuaternion, 1 - Math.exp(-this.preset.springStrength * dt));
     this.camera.quaternion.copy(this.currentQuaternion);
   }
 
   private resolvePreset(input: CameraRigPresetInput): CameraRigPreset {
-    const base = typeof input === 'string' ? CINEMATIC_CAMERA_PRESETS[input] ?? CINEMATIC_CAMERA_PRESETS.default : CINEMATIC_CAMERA_PRESETS.default;
+    const base = typeof input === 'string' ? CAMERA_PRESETS[input] ?? CAMERA_PRESETS.fallback : CAMERA_PRESETS.fallback;
     const override = typeof input === 'string' ? {} : input;
 
     return {
-      followOffset: (override.followOffset ?? base.followOffset).clone(),
-      lookAheadDistance: override.lookAheadDistance ?? base.lookAheadDistance,
-      followStiffness: override.followStiffness ?? base.followStiffness,
-      rotationStiffness: override.rotationStiffness ?? base.rotationStiffness,
-      baseFov: override.baseFov ?? base.baseFov,
-      maxFov: override.maxFov ?? base.maxFov,
-      speedForMaxFov: override.speedForMaxFov ?? base.speedForMaxFov,
-      fovResponse: override.fovResponse ?? base.fovResponse,
-      shakeAmount: override.shakeAmount ?? base.shakeAmount,
+      offset: (override.offset ?? base.offset).clone(),
+      lookAtOffset: (override.lookAtOffset ?? base.lookAtOffset).clone(),
+      lookAhead: override.lookAhead ?? base.lookAhead,
+      springStrength: override.springStrength ?? base.springStrength,
+      damping: override.damping ?? base.damping,
+      fovRange: {
+        base: override.fovRange?.base ?? base.fovRange.base,
+        max: override.fovRange?.max ?? base.fovRange.max,
+        speedForMax: override.fovRange?.speedForMax ?? base.fovRange.speedForMax,
+        response: override.fovRange?.response ?? base.fovRange.response,
+      },
+      shakeScale: override.shakeScale ?? base.shakeScale,
       shakeFrequency: override.shakeFrequency ?? base.shakeFrequency,
     };
   }
@@ -206,10 +190,11 @@ export class CinematicCameraRig {
     current: THREE.Vector3,
     target: THREE.Vector3,
     velocity: THREE.Vector3,
-    stiffness: number,
+    springStrength: number,
+    damping: number,
     dt: number,
   ): void {
-    const smoothTime = Math.max(0.01, 1 / Math.max(stiffness, 0.0001));
+    const smoothTime = Math.max(0.01, 1 / Math.max(springStrength, 0.0001));
     const omega = 2 / smoothTime;
     const x = omega * dt;
     const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
@@ -225,6 +210,9 @@ export class CinematicCameraRig {
     velocity.x = (velocity.x - omega * tempX) * exp;
     velocity.y = (velocity.y - omega * tempY) * exp;
     velocity.z = (velocity.z - omega * tempZ) * exp;
+
+    const dampingFactor = Math.exp(-Math.max(damping, 0) * dt);
+    velocity.multiplyScalar(dampingFactor);
 
     current.x = target.x + (deltaX + tempX) * exp;
     current.y = target.y + (deltaY + tempY) * exp;

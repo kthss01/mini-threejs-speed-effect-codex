@@ -23,6 +23,7 @@ npm run dev
 - [03-codex-guide](./docs/03-codex-guide.md)
 - [04-style-guide](./docs/04-style-guide.md)
 - [05-work-log](./docs/05-work-log.md)
+- [06-camera-preset-tuning](./docs/06-camera-preset-tuning.md)
 
 ## 현재 준비 상태
 - Vite + Three.js 실행 구조 준비
