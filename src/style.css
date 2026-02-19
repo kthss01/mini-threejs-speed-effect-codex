@@ -1,3 +1,35 @@
 * { box-sizing: border-box; }
-html, body, #app { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #05070d; }
+html, body, #app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #080f24 0%, #05070d 60%);
+}
 canvas { display: block; }
+
+#app {
+  position: relative;
+}
+
+#app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 45%, rgba(2, 4, 10, 0.58) 100%);
+}
+
+.hud {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  color: #e7efff;
+  font-family: 'Segoe UI', sans-serif;
+  letter-spacing: 0.16em;
+  font-size: 0.85rem;
+  text-shadow: 0 0 12px rgba(139, 179, 255, 0.8);
+  opacity: 0.82;
+  pointer-events: none;
+}
