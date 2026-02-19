@@ -65,6 +65,7 @@ export const appConfig = {
   },
   debug: {
     debugParallax: false,
+    showRoadSeams: false,
   },
 
   environment: {
