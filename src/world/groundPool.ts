@@ -21,8 +21,6 @@ export function createGroundPool(): GroundPool {
     return tile;
   });
 
-  const halfLoopDepth = tileCount * tileLength;
-
   return {
     group,
     update(delta: number, worldSpeed: number) {
@@ -30,7 +28,10 @@ export function createGroundPool(): GroundPool {
       for (const tile of tiles) {
         tile.position.z += effectiveSpeed * delta;
         if (tile.position.z > recycleZ) {
-          tile.position.z -= halfLoopDepth;
+          const furthestBackZ = tiles.reduce((minZ, currentTile) => {
+            return Math.min(minZ, currentTile.position.z);
+          }, Infinity);
+          tile.position.z = furthestBackZ - tileLength;
         }
       }
     },
