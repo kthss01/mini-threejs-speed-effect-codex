@@ -8,7 +8,7 @@ type GroundPool = {
 
 export function createGroundPool(): GroundPool {
   const { tileCount, tileLength, width, recycleZ, color } = appConfig.ground;
-  const tileOverlap = 0.25;
+  const tileOverlap = 1;
   const tileStride = tileLength - tileOverlap;
 
   const group = new THREE.Group();
@@ -27,13 +27,16 @@ export function createGroundPool(): GroundPool {
     group,
     update(delta: number, worldSpeed: number) {
       const effectiveSpeed = appConfig.ground.speed * worldSpeed;
+
+      let furthestBackZ = tiles.reduce((minZ, currentTile) => {
+        return Math.min(minZ, currentTile.position.z);
+      }, Infinity);
+
       for (const tile of tiles) {
         tile.position.z += effectiveSpeed * delta;
-        if (tile.position.z > recycleZ) {
-          const furthestBackZ = tiles.reduce((minZ, currentTile) => {
-            return Math.min(minZ, currentTile.position.z);
-          }, Infinity);
+        if (tile.position.z >= recycleZ) {
           tile.position.z = furthestBackZ - tileStride;
+          furthestBackZ = tile.position.z;
         }
       }
     },
