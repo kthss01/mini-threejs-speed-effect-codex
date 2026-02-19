@@ -32,6 +32,7 @@ export const appConfig = {
   },
   debug: {
     debugParallax: false,
+  },
 
   environment: {
     seed: 1337,
