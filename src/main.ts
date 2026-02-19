@@ -5,6 +5,7 @@ import { appConfig } from './config';
 import { createRenderLoop } from './core/loop';
 import { createSceneBundle } from './core/scene';
 import { createSpeedController } from './core/speedController';
+import { createParticleSystem } from './effects/particle-system';
 import { createSpeedLinesSystem } from './effects/speed-lines';
 import { setupDebugControls } from './input/debugToggle';
 import { createSpeedHud } from './ui/speedHud';
@@ -35,11 +36,20 @@ const speedLinesSystem = createSpeedLinesSystem(scene, camera, {
   farDistance: 260,
   speedScale: 1.4,
 });
+const particleSystem = createParticleSystem(scene, camera, {
+  profile: 'car',
+  mode: 'dust',
+  nearDistance: 3,
+  farDistance: 220,
+  count: 12000,
+});
 
 const rig = new CinematicCameraRig(camera, 'car');
 
 const applyVehiclePreset = (type: 'car' | 'bike') => {
   rig.setPreset(type);
+  particleSystem.setProfile(type);
+  particleSystem.setMode(type === 'car' ? 'dust' : 'rain');
 };
 
 applyVehiclePreset('car');
@@ -76,6 +86,7 @@ const handleBeforeUnload = () => {
   speedHud.dispose();
   debug.dispose();
   speedLinesSystem.dispose();
+  particleSystem.dispose();
   loop.stop();
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('resize', onResize);
@@ -86,9 +97,11 @@ window.addEventListener('beforeunload', handleBeforeUnload);
 
 const loop = createRenderLoop(renderer, scene, camera, (delta) => {
   const worldSpeed = speedController.getWorldSpeed();
+  const streakBoost = Math.min(3.5, 1 + worldSpeed * 0.08);
   rig.update(delta, worldSpeed, targetTransform);
   environment.update(delta, worldSpeed);
-  speedLinesSystem.update(delta, worldSpeed, camera);
+  speedLinesSystem.update(delta, worldSpeed * streakBoost, camera);
+  particleSystem.update(delta, worldSpeed * streakBoost, camera);
   debug.update();
 });
 
