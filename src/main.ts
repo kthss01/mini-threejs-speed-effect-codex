@@ -33,6 +33,10 @@ const handleSpeedInput = (event: KeyboardEvent) => {
 
 window.addEventListener('keydown', handleSpeedInput);
 
+const envManager = new EnvironmentManager(scene, undefined, appConfig.environment);
+envManager.init();
+let cameraProgress = 0;
+
 const debug = setupDebugControls(camera, renderer.domElement, scene);
 
 window.addEventListener('resize', onResize);
@@ -49,6 +53,8 @@ const loop = createRenderLoop(renderer, scene, camera, (delta) => {
   groundPool.update(delta, worldSpeed);
   cameraProgress = envManager.update(cameraProgress, delta, worldSpeed);
 
+  groundPool.update(delta);
+  cameraProgress = envManager.update(cameraProgress, delta, appConfig.ground.speed);
   debug.update();
 });
 
