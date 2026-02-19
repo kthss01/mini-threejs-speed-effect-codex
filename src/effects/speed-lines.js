@@ -13,6 +13,8 @@ const DEFAULT_OPTIONS = {
   nearDistance: 6,
   farDistance: 220,
   speedScale: 1,
+  noise: 0,
+  glow: 0,
 };
 
 export function createSpeedLinesSystem(scene, camera, options = {}) {
@@ -52,6 +54,8 @@ export function createSpeedLinesSystem(scene, camera, options = {}) {
     uCameraZ: { value: camera.position.z },
     uNear: { value: settings.nearDistance },
     uSpan: { value: span },
+    uNoise: { value: Math.max(0, settings.noise ?? 0) },
+    uGlow: { value: Math.max(0, settings.glow ?? 0) },
   };
 
   const material = new THREE.MeshBasicMaterial({
@@ -68,6 +72,8 @@ export function createSpeedLinesSystem(scene, camera, options = {}) {
     shader.uniforms.uCameraZ = uniforms.uCameraZ;
     shader.uniforms.uNear = uniforms.uNear;
     shader.uniforms.uSpan = uniforms.uSpan;
+    shader.uniforms.uNoise = uniforms.uNoise;
+    shader.uniforms.uGlow = uniforms.uGlow;
 
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -78,7 +84,8 @@ attribute float aOffset;
 attribute vec2 aXY;
 attribute float aLength;
 attribute float aBrightness;
-varying float vBrightness;`
+varying float vBrightness;
+varying float vSeed;`
       )
       .replace(
         '#include <begin_vertex>',
@@ -90,18 +97,26 @@ transformed.z *= aLength;
 transformed.x += aXY.x;
 transformed.y += aXY.y;
 transformed.z += streamZ;
-vBrightness = aBrightness;`
+vBrightness = aBrightness;
+vSeed = aSeed;`
       );
 
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         `#include <common>
-varying float vBrightness;`
+uniform float uTime;
+uniform float uNoise;
+uniform float uGlow;
+varying float vBrightness;
+varying float vSeed;`
       )
       .replace(
         'vec4 diffuseColor = vec4( diffuse, opacity );',
-        'vec4 diffuseColor = vec4(diffuse * vBrightness, opacity * vBrightness);'
+        `float noise = (fract(sin((vSeed + uTime) * 123.45) * 43758.5453) - 0.5) * uNoise;
+float lit = max(0.0, vBrightness + noise);
+vec3 glowColor = diffuse * (1.0 + uGlow);
+vec4 diffuseColor = vec4(glowColor * lit, opacity * lit);`
       );
   };
 
