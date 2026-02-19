@@ -5,6 +5,7 @@ import { appConfig } from './config';
 import { createRenderLoop } from './core/loop';
 import { createSceneBundle } from './core/scene';
 import { createSpeedController } from './core/speedController';
+import { createSpeedLinesSystem } from './effects/speed-lines';
 import { setupDebugControls } from './input/debugToggle';
 import { createSpeedHud } from './ui/speedHud';
 import { createEnvironmentManager } from './world/environmentManager';
@@ -23,6 +24,17 @@ const mapKmhToWorldSpeed = (kmh: number) => {
 const speedController = createSpeedController(mapKmhToWorldSpeed(appConfig.speed.initialKmh));
 const environment = createEnvironmentManager({ debugParallax: appConfig.debug.debugParallax });
 scene.add(environment.group);
+const speedLinesSystem = createSpeedLinesSystem(scene, camera, {
+  count: 3600,
+  color: 0xa6d6ff,
+  minLength: 1.5,
+  maxLength: 9,
+  spreadX: 34,
+  spreadY: 18,
+  nearDistance: 4,
+  farDistance: 260,
+  speedScale: 1.4,
+});
 
 const rig = new CinematicCameraRig(camera, 'car');
 
@@ -63,6 +75,7 @@ window.addEventListener('resize', onResize);
 const handleBeforeUnload = () => {
   speedHud.dispose();
   debug.dispose();
+  speedLinesSystem.dispose();
   loop.stop();
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('resize', onResize);
@@ -75,6 +88,7 @@ const loop = createRenderLoop(renderer, scene, camera, (delta) => {
   const worldSpeed = speedController.getWorldSpeed();
   rig.update(delta, worldSpeed, targetTransform);
   environment.update(delta, worldSpeed);
+  speedLinesSystem.update(delta, worldSpeed, camera);
   debug.update();
 });
 
