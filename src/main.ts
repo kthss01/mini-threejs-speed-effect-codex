@@ -24,13 +24,13 @@ const speedController = createSpeedController(mapKmhToWorldSpeed(appConfig.speed
 const environment = createEnvironmentManager({ debugParallax: appConfig.debug.debugParallax });
 scene.add(environment.group);
 
-const rig = new CinematicCameraRig(camera, {
-  followOffset: appConfig.camera.position,
-  baseFov: appConfig.camera.fov,
-  maxFov: appConfig.camera.fov + appConfig.speed.fovBoostAtMaxKmh,
-  speedForMaxFov: mapKmhToWorldSpeed(appConfig.speed.maxKmh),
-  fovResponse: 5,
-});
+const rig = new CinematicCameraRig(camera, 'car');
+
+const applyVehiclePreset = (type: 'car' | 'bike') => {
+  rig.setPreset(type);
+};
+
+applyVehiclePreset('car');
 
 const targetTransform = {
   position: new THREE.Vector3(0, 0, 0),
@@ -52,12 +52,19 @@ const debug = setupDebugControls(camera, renderer.domElement, scene, {
   getFovDebugState: () => rig.getFovDebugState(),
 });
 
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.code === 'Digit1') applyVehiclePreset('car');
+  if (event.code === 'Digit2') applyVehiclePreset('bike');
+};
+
+window.addEventListener('keydown', handleKeydown);
 window.addEventListener('resize', onResize);
 
 const handleBeforeUnload = () => {
   speedHud.dispose();
   debug.dispose();
   loop.stop();
+  window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('resize', onResize);
   window.removeEventListener('beforeunload', handleBeforeUnload);
 };
