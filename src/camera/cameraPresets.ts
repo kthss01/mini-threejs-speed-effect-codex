@@ -12,8 +12,11 @@ export type CameraRigPresetConfig = {
     speedForMax: number;
     response: number;
   };
-  shakeScale: number;
+  shakeBaseAmplitude: number;
+  shakeMaxAmplitude: number;
   shakeFrequency: number;
+  shakeSpeedFactor: number;
+  rotShakeRatio: number;
 };
 
 export const CAMERA_PRESETS = {
@@ -29,8 +32,11 @@ export const CAMERA_PRESETS = {
       speedForMax: 10,
       response: 5,
     },
-    shakeScale: 0.14,
+    shakeBaseAmplitude: 0.005,
+    shakeMaxAmplitude: 0.14,
     shakeFrequency: 17,
+    shakeSpeedFactor: 1,
+    rotShakeRatio: 0.24,
   },
   car: {
     offset: new THREE.Vector3(0, 3.4, 9.8),
@@ -44,8 +50,11 @@ export const CAMERA_PRESETS = {
       speedForMax: 11,
       response: 5.5,
     },
-    shakeScale: 0.18,
+    shakeBaseAmplitude: 0.006,
+    shakeMaxAmplitude: 0.18,
     shakeFrequency: 20,
+    shakeSpeedFactor: 1.05,
+    rotShakeRatio: 0.22,
   },
   bike: {
     offset: new THREE.Vector3(0, 4.3, 8.4),
@@ -59,8 +68,11 @@ export const CAMERA_PRESETS = {
       speedForMax: 12,
       response: 6.5,
     },
-    shakeScale: 0.2,
+    shakeBaseAmplitude: 0.007,
+    shakeMaxAmplitude: 0.2,
     shakeFrequency: 22,
+    shakeSpeedFactor: 1.1,
+    rotShakeRatio: 0.2,
   },
 } as const satisfies Record<string, CameraRigPresetConfig>;
 
