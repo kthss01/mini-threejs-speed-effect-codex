@@ -22,9 +22,6 @@ export const appConfig = {
     baseWorldSpeed: 12,
     inputStep: 0.08,
   },
-  environment: {
-    distanceScale: 1,
-  },
   ground: {
     tileCount: 12,
     tileLength: 20,
@@ -35,6 +32,7 @@ export const appConfig = {
   },
 
   environment: {
+    distanceScale: 1,
     seed: 1337,
     initRange: { near: 40, far: 220 },
     recycleThreshold: 10,
