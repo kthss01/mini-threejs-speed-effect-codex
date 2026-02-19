@@ -1,19 +1,19 @@
 import * as THREE from 'three';
 
 const DEFAULT_OPTIONS = {
-  count: 9000,
+  count: 1800,
   color: 0xd5ecff,
-  baseSize: 7,
-  sizeJitter: 8,
-  minLife: 0.5,
-  maxLife: 1.8,
-  minBrightness: 0.25,
-  maxBrightness: 1,
-  spreadX: 36,
-  spreadY: 18,
+  baseSize: 5,
+  sizeJitter: 4,
+  minLife: 0.8,
+  maxLife: 2.2,
+  minBrightness: 0.12,
+  maxBrightness: 0.45,
+  spreadX: 26,
+  spreadY: 8,
   nearDistance: 3,
   farDistance: 260,
-  speedScale: 0.8,
+  speedScale: 0.42,
   blending: 'normal',
   profile: 'bike',
   mode: 'dust',
@@ -31,27 +31,27 @@ const MODE_MAP = {
 const PROFILE_PRESETS = {
   car: {
     mode: 'dust',
-    count: 14000,
-    spreadX: 28,
-    spreadY: 10,
-    minBrightness: 0.22,
-    maxBrightness: 0.8,
-    baseSize: 9,
-    sizeJitter: 10,
+    count: 2800,
+    spreadX: 22,
+    spreadY: 7,
+    minBrightness: 0.1,
+    maxBrightness: 0.42,
+    baseSize: 4.8,
+    sizeJitter: 3.2,
     blending: 'normal',
-    speedScale: 1,
+    speedScale: 0.45,
   },
   bike: {
     mode: 'rain',
-    count: 9000,
-    spreadX: 34,
-    spreadY: 16,
-    minBrightness: 0.35,
-    maxBrightness: 1,
-    baseSize: 6,
-    sizeJitter: 8,
+    count: 1800,
+    spreadX: 24,
+    spreadY: 9,
+    minBrightness: 0.16,
+    maxBrightness: 0.45,
+    baseSize: 4.2,
+    sizeJitter: 4,
     blending: 'additive',
-    speedScale: 0.78,
+    speedScale: 0.4,
   },
 };
 
@@ -60,7 +60,7 @@ const randomRange = (min, max) => min + Math.random() * (max - min);
 export function createParticleSystem(scene, camera, options = {}) {
   const profileOptions = PROFILE_PRESETS[options.profile] ?? PROFILE_PRESETS.bike;
   const settings = { ...DEFAULT_OPTIONS, ...profileOptions, ...options };
-  const count = Math.max(5000, Math.min(20000, Math.floor(settings.count)));
+  const count = Math.max(900, Math.min(6000, Math.floor(settings.count)));
 
   const geometry = new THREE.BufferGeometry();
   const positions = new Float32Array(count * 3);
@@ -134,13 +134,13 @@ export function createParticleSystem(scene, camera, options = {}) {
         float wrappedDepth = mod(cameraSpaceZ + uNear, distanceRange) + uNear;
         p.z = -wrappedDepth;
 
-        float alphaFade = 1.0 - smoothstep(uNear, uFar, wrappedDepth);
-        float speedFade = smoothstep(0.2, 2.5, speed);
+        float alphaFade = (1.0 - smoothstep(uNear, uFar, wrappedDepth)) * 0.5;
+        float speedFade = smoothstep(0.35, 3.2, speed);
         vFade = alphaFade * speedFade;
         vBrightness = aBrightness;
 
         vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = aSize * (250.0 / -mvPosition.z) * (1.0 + speed * 0.07);
+        gl_PointSize = aSize * (210.0 / -mvPosition.z) * (1.0 + speed * 0.03);
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -158,7 +158,7 @@ export function createParticleSystem(scene, camera, options = {}) {
         if (radial <= 0.0) discard;
         float noise = (fract(sin((gl_PointCoord.x + gl_PointCoord.y + uTime) * 91.7) * 43758.5453) - 0.5) * uNoise;
         float lit = max(0.0, vBrightness + noise);
-        float alpha = pow(radial, 1.6) * vFade * (1.0 + uGlow * 0.35);
+        float alpha = pow(radial, 2.1) * vFade * (1.0 + uGlow * 0.2);
         gl_FragColor = vec4(uColor * lit * (1.0 + uGlow), alpha);
       }
     `,

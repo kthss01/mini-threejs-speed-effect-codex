@@ -12,9 +12,9 @@ const QUALITY_PRESETS = {
       glow: 0,
     },
     particles: {
-      count: 6500,
+      count: 1200,
       noise: 0,
-      glow: 0,
+      glow: 0.04,
     },
   },
   medium: {
@@ -24,9 +24,9 @@ const QUALITY_PRESETS = {
       glow: 0.25,
     },
     particles: {
-      count: 10000,
-      noise: 0.15,
-      glow: 0.22,
+      count: 2000,
+      noise: 0.08,
+      glow: 0.12,
     },
   },
   high: {
@@ -36,9 +36,9 @@ const QUALITY_PRESETS = {
       glow: 0.5,
     },
     particles: {
-      count: 14500,
-      noise: 0.35,
-      glow: 0.4,
+      count: 3200,
+      noise: 0.16,
+      glow: 0.2,
     },
   },
 };
