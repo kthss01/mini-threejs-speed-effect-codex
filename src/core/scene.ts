@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { appConfig } from '../config';
 
+export type SceneTheme = keyof typeof appConfig.lighting;
+
 export type SceneBundle = {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -8,9 +10,14 @@ export type SceneBundle = {
   onResize: () => void;
 };
 
-export function createSceneBundle(container: HTMLElement): SceneBundle {
+export function createSceneBundle(container: HTMLElement, theme: SceneTheme = 'night'): SceneBundle {
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(appConfig.fog.color, appConfig.fog.near, appConfig.fog.far);
+  const lightingPreset = appConfig.lighting[theme];
+  scene.fog = new THREE.Fog(
+    lightingPreset.fog.color,
+    lightingPreset.fog.near,
+    lightingPreset.fog.far,
+  );
 
   const camera = new THREE.PerspectiveCamera(
     appConfig.camera.fov,
@@ -24,14 +31,25 @@ export function createSceneBundle(container: HTMLElement): SceneBundle {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, appConfig.renderer.maxPixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(appConfig.renderer.clearColor);
+  renderer.setClearColor(lightingPreset.renderer.clearColor);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
 
-  const hemiLight = new THREE.HemisphereLight(0xdbe9ff, 0x203350, 0.65);
-  const directional = new THREE.DirectionalLight(0xffffff, 1.05);
-  directional.position.set(8, 14, 6);
-  scene.add(hemiLight, directional);
+  const hemiLight = new THREE.HemisphereLight(
+    lightingPreset.hemisphere.skyColor,
+    lightingPreset.hemisphere.groundColor,
+    lightingPreset.hemisphere.intensity,
+  );
+
+  const moonLight = new THREE.DirectionalLight(lightingPreset.moon.color, lightingPreset.moon.intensity);
+  moonLight.position.copy(lightingPreset.moon.position);
+
+  const ambientLight = new THREE.AmbientLight(
+    lightingPreset.ambient.color,
+    lightingPreset.ambient.intensity,
+  );
+
+  scene.add(hemiLight, moonLight, ambientLight);
 
   const onResize = () => {
     camera.aspect = window.innerWidth / window.innerHeight;

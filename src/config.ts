@@ -1,10 +1,31 @@
 import * as THREE from 'three';
 
 export const appConfig = {
-  fog: {
-    color: 0x0a1020,
-    near: 20,
-    far: 180,
+  lighting: {
+    night: {
+      hemisphere: {
+        skyColor: 0x91a8d6,
+        groundColor: 0x111a2d,
+        intensity: 0.32,
+      },
+      moon: {
+        color: 0xc8d8ff,
+        intensity: 0.48,
+        position: new THREE.Vector3(6, 8, 14),
+      },
+      ambient: {
+        color: 0x7f96c2,
+        intensity: 0.08,
+      },
+      fog: {
+        color: 0x060b16,
+        near: 18,
+        far: 150,
+      },
+      renderer: {
+        clearColor: 0x03060f,
+      },
+    },
   },
   camera: {
     fov: 60,
@@ -59,7 +80,6 @@ export const appConfig = {
     },
   },
   renderer: {
-    clearColor: 0x070b14,
     maxPixelRatio: 2,
   },
 } as const;

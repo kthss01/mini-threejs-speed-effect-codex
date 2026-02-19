@@ -13,7 +13,7 @@ import { createEnvironmentManager } from './world/environmentManager';
 const container = document.querySelector<HTMLElement>('#app');
 if (!container) throw new Error('Missing #app container');
 
-const { scene, camera, renderer, onResize } = createSceneBundle(container);
+const { scene, camera, renderer, onResize } = createSceneBundle(container, 'night');
 
 const mapKmhToWorldSpeed = (kmh: number) => {
   const { referenceKmh, referenceWorldSpeed } = appConfig.speed;
