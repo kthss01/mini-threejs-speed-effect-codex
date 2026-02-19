@@ -20,6 +20,9 @@ export const appConfig = {
     recycleZ: 12,
     color: 0x1a2235,
   },
+  debug: {
+    debugParallax: false,
+  },
   renderer: {
     clearColor: 0x070b14,
     maxPixelRatio: 2,

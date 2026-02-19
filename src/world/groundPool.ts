@@ -3,14 +3,14 @@ import { appConfig } from '../config';
 
 type GroundPool = {
   group: THREE.Group;
-  update: (delta: number) => void;
+  update: (delta: number, worldSpeed: number) => void;
 };
 
 export function createGroundPool(): GroundPool {
-  const { tileCount, tileLength, width, speed, recycleZ, color } = appConfig.ground;
+  const { tileCount, tileLength, speed, recycleZ, color } = appConfig.ground;
 
   const group = new THREE.Group();
-  const tileGeometry = new THREE.PlaneGeometry(width, tileLength, 1, 8);
+  const tileGeometry = new THREE.PlaneGeometry(appConfig.ground.width, tileLength, 1, 8);
   const tileMaterial = new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0.03 });
 
   const tiles = Array.from({ length: tileCount }, (_, index) => {
@@ -25,9 +25,10 @@ export function createGroundPool(): GroundPool {
 
   return {
     group,
-    update(delta: number) {
+    update(delta: number, worldSpeed: number) {
+      const effectiveSpeed = speed * worldSpeed;
       for (const tile of tiles) {
-        tile.position.z += speed * delta;
+        tile.position.z += effectiveSpeed * delta;
         if (tile.position.z > recycleZ) {
           tile.position.z -= halfLoopDepth;
         }
