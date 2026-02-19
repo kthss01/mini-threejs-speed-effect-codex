@@ -22,6 +22,7 @@ npm run dev
 - [02-dev-workflow](./docs/02-dev-workflow.md)
 - [03-codex-guide](./docs/03-codex-guide.md)
 - [04-style-guide](./docs/04-style-guide.md)
+- [05-work-log](./docs/05-work-log.md)
 
 ## 현재 준비 상태
 - Vite + Three.js 실행 구조 준비
