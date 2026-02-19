@@ -24,7 +24,7 @@ export const appConfig = {
     tileLength: 20,
     width: 18,
     speed: 12,
-    recycleZ: 12,
+    recycleZ: 24,
     color: 0x1a2235,
   },
   debug: {
