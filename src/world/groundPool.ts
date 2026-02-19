@@ -8,6 +8,7 @@ type GroundPool = {
 
 export function createGroundPool(): GroundPool {
   const { tileCount, tileLength, speed, recycleZ, color } = appConfig.ground;
+  const { tileCount, tileLength, width, recycleZ, color } = appConfig.ground;
 
   const group = new THREE.Group();
   const tileGeometry = new THREE.PlaneGeometry(appConfig.ground.width, tileLength, 1, 8);
@@ -29,6 +30,8 @@ export function createGroundPool(): GroundPool {
       const effectiveSpeed = speed * worldSpeed;
       for (const tile of tiles) {
         tile.position.z += effectiveSpeed * delta;
+      for (const tile of tiles) {
+        tile.position.z += worldSpeed * delta;
         if (tile.position.z > recycleZ) {
           tile.position.z -= halfLoopDepth;
         }
