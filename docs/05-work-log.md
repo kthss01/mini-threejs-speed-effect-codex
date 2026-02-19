@@ -16,6 +16,21 @@
 ---
 
 ## 2026-02-19
+- 작업 제목: SpeedController 분리 및 3단 패럴랙스 환경 풀링 연결
+- 변경 파일:
+  - `src/main.ts`
+  - `src/config.ts`
+  - `src/core/speedController.ts`
+  - `src/world/groundPool.ts`
+  - `src/world/environmentManager.ts`
+  - `docs/05-work-log.md`
+- 검증 명령:
+  - `npm run build` (성공)
+- 비고:
+  - near/mid/far 레이어별 배율을 `parallaxLayers`와 동기화해 가속/감속 시 계층감이 유지되도록 조정
+  - 카메라 FOV 및 미세 흔들림을 속도 정규화 값에 연동
+
+## 2026-02-19
 - 작업 제목: Codex 커밋/PR 규칙 및 작업 로그 정책 문서화
 - 변경 파일:
   - `docs/03-codex-guide.md`

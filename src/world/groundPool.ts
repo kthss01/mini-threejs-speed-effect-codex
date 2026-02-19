@@ -3,11 +3,11 @@ import { appConfig } from '../config';
 
 type GroundPool = {
   group: THREE.Group;
-  update: (delta: number) => void;
+  update: (delta: number, speed: number) => void;
 };
 
 export function createGroundPool(): GroundPool {
-  const { tileCount, tileLength, width, speed, recycleZ, color } = appConfig.ground;
+  const { tileCount, tileLength, width, recycleZ, color } = appConfig.ground;
 
   const group = new THREE.Group();
   const tileGeometry = new THREE.PlaneGeometry(width, tileLength, 1, 8);
@@ -25,7 +25,7 @@ export function createGroundPool(): GroundPool {
 
   return {
     group,
-    update(delta: number) {
+    update(delta: number, speed: number) {
       for (const tile of tiles) {
         tile.position.z += speed * delta;
         if (tile.position.z > recycleZ) {
