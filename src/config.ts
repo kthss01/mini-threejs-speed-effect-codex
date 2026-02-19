@@ -30,6 +30,8 @@ export const appConfig = {
     recycleZ: 12,
     color: 0x1a2235,
   },
+  debug: {
+    debugParallax: false,
 
   environment: {
     seed: 1337,
