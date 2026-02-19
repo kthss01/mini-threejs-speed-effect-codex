@@ -24,8 +24,17 @@ type CameraRigPreset = {
     speedForMax: number;
     response: number;
   };
-  shakeScale: number;
+  shakeBaseAmplitude: number;
+  shakeMaxAmplitude: number;
   shakeFrequency: number;
+  shakeSpeedFactor: number;
+  rotShakeRatio: number;
+};
+
+type ShakeImpulse = {
+  intensity: number;
+  duration: number;
+  remaining: number;
 };
 
 export type CameraRigFovDebugState = {
@@ -58,6 +67,9 @@ export class CinematicCameraRig {
   private readonly workingEuler = new THREE.Euler();
   private readonly rotatedOffset = new THREE.Vector3();
   private readonly shakeOffset = new THREE.Vector3();
+  private readonly shakeRotation = new THREE.Euler();
+  private readonly shakeQuaternion = new THREE.Quaternion();
+  private readonly activeImpulses: ShakeImpulse[] = [];
   private readonly fovDebugState: CameraRigFovDebugState = {
     speed: 0,
     normalizedSpeed: 0,
@@ -83,7 +95,7 @@ export class CinematicCameraRig {
     this.elapsedTime += dt;
     this.updateFollowSpring(dt, targetTransform);
     this.updateFov(dt, speed);
-    this.updateShake(speed);
+    this.updateShake(dt, speed);
     this.applyCameraPose(dt, targetTransform);
   }
 
@@ -107,6 +119,9 @@ export class CinematicCameraRig {
     this.camera.updateProjectionMatrix();
     this.elapsedTime = 0;
     this.shakeOffset.set(0, 0, 0);
+    this.shakeRotation.set(0, 0, 0);
+    this.shakeQuaternion.identity();
+    this.activeImpulses.length = 0;
     this.fovDebugState.speed = 0;
     this.fovDebugState.normalizedSpeed = 0;
     this.fovDebugState.targetFov = this.preset.fovRange.base;
@@ -115,6 +130,15 @@ export class CinematicCameraRig {
 
   getFovDebugState(): CameraRigFovDebugState {
     return { ...this.fovDebugState };
+  }
+
+  addImpulse(intensity: number, duration: number): void {
+    if (intensity <= 0 || duration <= 0) return;
+    this.activeImpulses.push({
+      intensity,
+      duration,
+      remaining: duration,
+    });
   }
 
   private updateFollowSpring(dt: number, targetTransform: CameraTargetTransform): void {
@@ -146,11 +170,36 @@ export class CinematicCameraRig {
     this.fovDebugState.actualFov = this.camera.fov;
   }
 
-  private updateShake(speed: number): void {
-    const intensity = THREE.MathUtils.clamp(speed / this.preset.fovRange.speedForMax, 0, 1) * this.preset.shakeScale;
+  private updateShake(dt: number, speed: number): void {
+    const speedNorm = THREE.MathUtils.clamp(
+      (speed / this.preset.fovRange.speedForMax) * this.preset.shakeSpeedFactor,
+      0,
+      1,
+    );
+    const deadZone = 0.12;
+    const deadZoneNormalized = speedNorm <= deadZone ? 0 : (speedNorm - deadZone) / (1 - deadZone);
+    const easedSpeedNorm = deadZoneNormalized * deadZoneNormalized * (3 - 2 * deadZoneNormalized);
+
+    const baseAmplitude = THREE.MathUtils.lerp(
+      this.preset.shakeBaseAmplitude,
+      this.preset.shakeMaxAmplitude,
+      easedSpeedNorm,
+    );
+    const impulseMultiplier = 1 + this.consumeImpulses(dt);
+    const positionAmplitude = baseAmplitude * impulseMultiplier;
+    const rotationAmplitude = positionAmplitude * this.preset.rotShakeRatio;
     const t = this.elapsedTime * this.preset.shakeFrequency;
 
-    this.shakeOffset.set(Math.sin(t) * intensity, Math.cos(t * 1.37) * intensity * 0.5, 0);
+    this.shakeOffset.set(
+      this.multiSineNoise(t, 1.11, 0.2) * positionAmplitude,
+      this.multiSineNoise(t, 1.73, 1.4) * positionAmplitude * 0.5,
+      this.multiSineNoise(t, 2.09, 2.1) * positionAmplitude * 0.2,
+    );
+    this.shakeRotation.set(
+      this.multiSineNoise(t, 1.47, 0.8) * rotationAmplitude * 0.35,
+      this.multiSineNoise(t, 1.89, 2.7) * rotationAmplitude * 0.5,
+      this.multiSineNoise(t, 2.31, 1.2) * rotationAmplitude * 0.2,
+    );
   }
 
   private applyCameraPose(dt: number, targetTransform: CameraTargetTransform): void {
@@ -162,7 +211,8 @@ export class CinematicCameraRig {
     this.cameraLookMatrix.lookAt(this.camera.position, this.currentLookAt, WORLD_UP);
     this.desiredQuaternion.setFromRotationMatrix(this.cameraLookMatrix);
     this.currentQuaternion.slerp(this.desiredQuaternion, 1 - Math.exp(-this.preset.springStrength * dt));
-    this.camera.quaternion.copy(this.currentQuaternion);
+    this.shakeQuaternion.setFromEuler(this.shakeRotation);
+    this.camera.quaternion.copy(this.currentQuaternion).multiply(this.shakeQuaternion);
   }
 
   private resolvePreset(input: CameraRigPresetInput): CameraRigPreset {
@@ -181,9 +231,39 @@ export class CinematicCameraRig {
         speedForMax: override.fovRange?.speedForMax ?? base.fovRange.speedForMax,
         response: override.fovRange?.response ?? base.fovRange.response,
       },
-      shakeScale: override.shakeScale ?? base.shakeScale,
+      shakeBaseAmplitude: override.shakeBaseAmplitude ?? base.shakeBaseAmplitude,
+      shakeMaxAmplitude: override.shakeMaxAmplitude ?? base.shakeMaxAmplitude,
       shakeFrequency: override.shakeFrequency ?? base.shakeFrequency,
+      shakeSpeedFactor: override.shakeSpeedFactor ?? base.shakeSpeedFactor,
+      rotShakeRatio: override.rotShakeRatio ?? base.rotShakeRatio,
     };
+  }
+
+  private consumeImpulses(dt: number): number {
+    let impulse = 0;
+
+    for (let index = this.activeImpulses.length - 1; index >= 0; index -= 1) {
+      const item = this.activeImpulses[index];
+      item.remaining = Math.max(item.remaining - dt, 0);
+      const normalized = item.duration <= 0 ? 0 : item.remaining / item.duration;
+      const envelope = normalized * normalized;
+
+      impulse += item.intensity * envelope;
+      if (item.remaining <= 0) {
+        this.activeImpulses.splice(index, 1);
+      }
+    }
+
+    return impulse;
+  }
+
+  private multiSineNoise(time: number, speedFactor: number, phase: number): number {
+    const sample = time * speedFactor + phase;
+    const a = Math.sin(sample);
+    const b = Math.sin(sample * 2.17 + 1.37) * 0.5;
+    const c = Math.sin(sample * 3.91 + 0.61) * 0.25;
+
+    return (a + b + c) / 1.75;
   }
 
   private smoothDampVector(
