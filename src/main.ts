@@ -15,9 +15,13 @@ const speedController = createSpeedController(0);
 const environment = createEnvironmentManager({ debugParallax: appConfig.debug.debugParallax });
 scene.add(environment.group);
 
+const baseCameraFov = camera.fov;
+let currentKmh = appConfig.speed.initialKmh;
+
 const mapKmhToWorldSpeed = (kmh: number) => {
-  const ratio = kmh / appConfig.speed.maxKmh;
-  return ratio * appConfig.speed.maxWorldSpeed;
+  const { referenceKmh, referenceWorldSpeed } = appConfig.speed;
+  const normalizedKmh = Math.max(0, kmh);
+  return (normalizedKmh / referenceKmh) * referenceWorldSpeed;
 };
 
 const speedHud = createSpeedHud({
@@ -26,6 +30,7 @@ const speedHud = createSpeedHud({
   maxKmh: appConfig.speed.maxKmh,
   initialKmh: appConfig.speed.initialKmh,
   onSpeedChange(kmh) {
+    currentKmh = kmh;
     speedController.setWorldSpeed(mapKmhToWorldSpeed(kmh));
   },
 });
@@ -45,6 +50,11 @@ const handleBeforeUnload = () => {
 window.addEventListener('beforeunload', handleBeforeUnload);
 
 const loop = createRenderLoop(renderer, scene, camera, (delta) => {
+  const fovRatio = currentKmh / appConfig.speed.maxKmh;
+  const targetFov = baseCameraFov + fovRatio * appConfig.speed.fovBoostAtMaxKmh;
+  camera.fov += (targetFov - camera.fov) * Math.min(1, delta * 5);
+  camera.updateProjectionMatrix();
+
   environment.update(delta, speedController.getWorldSpeed());
   debug.update();
 });

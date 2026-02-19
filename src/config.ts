@@ -16,8 +16,10 @@ export const appConfig = {
   speed: {
     minKmh: 0,
     maxKmh: 240,
-    initialKmh: 110,
-    maxWorldSpeed: 2.6,
+    initialKmh: 30,
+    referenceKmh: 30,
+    referenceWorldSpeed: 1.25,
+    fovBoostAtMaxKmh: 16,
   },
   ground: {
     tileCount: 12,
