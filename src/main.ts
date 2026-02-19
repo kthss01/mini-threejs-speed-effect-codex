@@ -3,6 +3,7 @@ import { createSceneBundle } from './core/scene';
 import { createGroundPool } from './world/groundPool';
 import { createRenderLoop } from './core/loop';
 import { setupDebugControls } from './input/debugToggle';
+import { EnvironmentManager } from './world/environment-manager.js';
 import { appConfig } from './config';
 import { SpeedController } from './core/speed-controller.js';
 
@@ -14,7 +15,11 @@ const groundPool = createGroundPool();
 scene.add(groundPool.group);
 
 const speedController = new SpeedController(appConfig.speed);
+const envManager = new EnvironmentManager(scene, undefined, appConfig.environment);
+envManager.init();
+
 const baseCameraFov = appConfig.camera.fov;
+let cameraProgress = 0;
 
 const handleSpeedInput = (event: KeyboardEvent) => {
   if (event.code === 'ArrowUp' || event.code === 'KeyW') {
@@ -42,6 +47,8 @@ const loop = createRenderLoop(renderer, scene, camera, (delta) => {
   camera.updateProjectionMatrix();
 
   groundPool.update(delta, worldSpeed);
+  cameraProgress = envManager.update(cameraProgress, delta, worldSpeed);
+
   debug.update();
 });
 
