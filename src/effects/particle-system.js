@@ -18,6 +18,8 @@ const DEFAULT_OPTIONS = {
   profile: 'bike',
   mode: 'dust',
   frustumCulled: false,
+  noise: 0,
+  glow: 0,
 };
 
 const MODE_MAP = {
@@ -91,6 +93,8 @@ export function createParticleSystem(scene, camera, options = {}) {
     uNear: { value: settings.nearDistance },
     uFar: { value: settings.farDistance },
     uColor: { value: new THREE.Color(settings.color) },
+    uNoise: { value: Math.max(0, settings.noise ?? 0) },
+    uGlow: { value: Math.max(0, settings.glow ?? 0) },
   };
 
   const material = new THREE.ShaderMaterial({
@@ -142,6 +146,9 @@ export function createParticleSystem(scene, camera, options = {}) {
     `,
     fragmentShader: `
       uniform vec3 uColor;
+      uniform float uNoise;
+      uniform float uGlow;
+      uniform float uTime;
       varying float vBrightness;
       varying float vFade;
 
@@ -149,8 +156,10 @@ export function createParticleSystem(scene, camera, options = {}) {
         vec2 uv = gl_PointCoord * 2.0 - 1.0;
         float radial = 1.0 - dot(uv, uv);
         if (radial <= 0.0) discard;
-        float alpha = pow(radial, 1.6) * vFade;
-        gl_FragColor = vec4(uColor * vBrightness, alpha);
+        float noise = (fract(sin((gl_PointCoord.x + gl_PointCoord.y + uTime) * 91.7) * 43758.5453) - 0.5) * uNoise;
+        float lit = max(0.0, vBrightness + noise);
+        float alpha = pow(radial, 1.6) * vFade * (1.0 + uGlow * 0.35);
+        gl_FragColor = vec4(uColor * lit * (1.0 + uGlow), alpha);
       }
     `,
   });

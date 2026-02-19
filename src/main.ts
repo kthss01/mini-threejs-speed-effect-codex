@@ -5,8 +5,7 @@ import { appConfig } from './config';
 import { createRenderLoop } from './core/loop';
 import { createSceneBundle } from './core/scene';
 import { createSpeedController } from './core/speedController';
-import { createParticleSystem } from './effects/particle-system';
-import { createSpeedLinesSystem } from './effects/speed-lines';
+import { createEffectsController } from './effects/effects-controller';
 import { setupDebugControls } from './input/debugToggle';
 import { createSpeedHud } from './ui/speedHud';
 import { createEnvironmentManager } from './world/environmentManager';
@@ -25,34 +24,16 @@ const mapKmhToWorldSpeed = (kmh: number) => {
 const speedController = createSpeedController(mapKmhToWorldSpeed(appConfig.speed.initialKmh));
 const environment = createEnvironmentManager({ debugParallax: appConfig.debug.debugParallax });
 scene.add(environment.group);
-const speedLinesSystem = createSpeedLinesSystem(scene, camera, {
-  count: 3600,
-  color: 0xa6d6ff,
-  minLength: 1.5,
-  maxLength: 9,
-  spreadX: 34,
-  spreadY: 18,
-  nearDistance: 4,
-  farDistance: 260,
-  speedScale: 1.4,
-});
-const particleSystem = createParticleSystem(scene, camera, {
-  profile: 'car',
-  mode: 'dust',
-  nearDistance: 3,
-  farDistance: 220,
-  count: 12000,
+
+const effectsController = createEffectsController(scene, camera, {
+  quality: 'medium',
+  profile: 'dust',
+  particles: {
+    profile: 'car',
+  },
 });
 
 const rig = new CinematicCameraRig(camera, 'car');
-
-const applyVehiclePreset = (type: 'car' | 'bike') => {
-  rig.setPreset(type);
-  particleSystem.setProfile(type);
-  particleSystem.setMode(type === 'car' ? 'dust' : 'rain');
-};
-
-applyVehiclePreset('car');
 
 const targetTransform = {
   position: new THREE.Vector3(0, 0, 0),
@@ -75,8 +56,10 @@ const debug = setupDebugControls(camera, renderer.domElement, scene, {
 });
 
 const handleKeydown = (event: KeyboardEvent) => {
-  if (event.code === 'Digit1') applyVehiclePreset('car');
-  if (event.code === 'Digit2') applyVehiclePreset('bike');
+  if (event.code === 'Digit1') effectsController.setQuality('low');
+  if (event.code === 'Digit2') effectsController.setQuality('medium');
+  if (event.code === 'Digit3') effectsController.setQuality('high');
+  if (event.code === 'KeyR') effectsController.cycleProfile();
 };
 
 window.addEventListener('keydown', handleKeydown);
@@ -85,8 +68,7 @@ window.addEventListener('resize', onResize);
 const handleBeforeUnload = () => {
   speedHud.dispose();
   debug.dispose();
-  speedLinesSystem.dispose();
-  particleSystem.dispose();
+  effectsController.dispose();
   loop.stop();
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('resize', onResize);
@@ -100,8 +82,7 @@ const loop = createRenderLoop(renderer, scene, camera, (delta) => {
   const streakBoost = Math.min(3.5, 1 + worldSpeed * 0.08);
   rig.update(delta, worldSpeed, targetTransform);
   environment.update(delta, worldSpeed);
-  speedLinesSystem.update(delta, worldSpeed * streakBoost, camera);
-  particleSystem.update(delta, worldSpeed * streakBoost, camera);
+  effectsController.update(delta, worldSpeed * streakBoost);
   debug.update();
 });
 
