@@ -26,9 +26,10 @@ scene.add(environment.group);
 
 const rig = new CinematicCameraRig(camera, {
   followOffset: appConfig.camera.position,
-  fovBase: appConfig.camera.fov,
-  fovBoostAtMaxSpeed: appConfig.speed.fovBoostAtMaxKmh,
-  maxSpeedForFov: mapKmhToWorldSpeed(appConfig.speed.maxKmh),
+  baseFov: appConfig.camera.fov,
+  maxFov: appConfig.camera.fov + appConfig.speed.fovBoostAtMaxKmh,
+  speedForMaxFov: mapKmhToWorldSpeed(appConfig.speed.maxKmh),
+  fovResponse: 5,
 });
 
 const targetTransform = {
@@ -46,7 +47,10 @@ const speedHud = createSpeedHud({
   },
 });
 
-const debug = setupDebugControls(camera, renderer.domElement, scene);
+const debug = setupDebugControls(camera, renderer.domElement, scene, {
+  getSpeed: () => speedController.getWorldSpeed(),
+  getFovDebugState: () => rig.getFovDebugState(),
+});
 
 window.addEventListener('resize', onResize);
 
