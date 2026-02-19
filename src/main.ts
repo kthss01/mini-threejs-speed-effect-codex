@@ -1,27 +1,39 @@
 import './style.css';
-import { createSceneBundle } from './core/scene';
-import { createRenderLoop } from './core/loop';
-import { setupDebugControls } from './input/debugToggle';
-import { createEnvironmentManager } from './world/environmentManager';
-import { createSpeedController } from './core/speedController';
+import * as THREE from 'three';
+import { CinematicCameraRig } from './camera/CinematicCameraRig';
 import { appConfig } from './config';
+import { createRenderLoop } from './core/loop';
+import { createSceneBundle } from './core/scene';
+import { createSpeedController } from './core/speedController';
+import { setupDebugControls } from './input/debugToggle';
 import { createSpeedHud } from './ui/speedHud';
+import { createEnvironmentManager } from './world/environmentManager';
 
 const container = document.querySelector<HTMLElement>('#app');
 if (!container) throw new Error('Missing #app container');
 
 const { scene, camera, renderer, onResize } = createSceneBundle(container);
-const speedController = createSpeedController(0);
-const environment = createEnvironmentManager({ debugParallax: appConfig.debug.debugParallax });
-scene.add(environment.group);
-
-const baseCameraFov = camera.fov;
-let currentKmh = appConfig.speed.initialKmh;
 
 const mapKmhToWorldSpeed = (kmh: number) => {
   const { referenceKmh, referenceWorldSpeed } = appConfig.speed;
   const normalizedKmh = Math.max(0, kmh);
   return (normalizedKmh / referenceKmh) * referenceWorldSpeed;
+};
+
+const speedController = createSpeedController(mapKmhToWorldSpeed(appConfig.speed.initialKmh));
+const environment = createEnvironmentManager({ debugParallax: appConfig.debug.debugParallax });
+scene.add(environment.group);
+
+const rig = new CinematicCameraRig(camera, {
+  followOffset: appConfig.camera.position,
+  fovBase: appConfig.camera.fov,
+  fovBoostAtMaxSpeed: appConfig.speed.fovBoostAtMaxKmh,
+  maxSpeedForFov: mapKmhToWorldSpeed(appConfig.speed.maxKmh),
+});
+
+const targetTransform = {
+  position: new THREE.Vector3(0, 0, 0),
+  forward: new THREE.Vector3(0, 0, -1),
 };
 
 const speedHud = createSpeedHud({
@@ -30,7 +42,6 @@ const speedHud = createSpeedHud({
   maxKmh: appConfig.speed.maxKmh,
   initialKmh: appConfig.speed.initialKmh,
   onSpeedChange(kmh) {
-    currentKmh = kmh;
     speedController.setWorldSpeed(mapKmhToWorldSpeed(kmh));
   },
 });
@@ -50,12 +61,9 @@ const handleBeforeUnload = () => {
 window.addEventListener('beforeunload', handleBeforeUnload);
 
 const loop = createRenderLoop(renderer, scene, camera, (delta) => {
-  const fovRatio = currentKmh / appConfig.speed.maxKmh;
-  const targetFov = baseCameraFov + fovRatio * appConfig.speed.fovBoostAtMaxKmh;
-  camera.fov += (targetFov - camera.fov) * Math.min(1, delta * 5);
-  camera.updateProjectionMatrix();
-
-  environment.update(delta, speedController.getWorldSpeed());
+  const worldSpeed = speedController.getWorldSpeed();
+  rig.update(delta, worldSpeed, targetTransform);
+  environment.update(delta, worldSpeed);
   debug.update();
 });
 
