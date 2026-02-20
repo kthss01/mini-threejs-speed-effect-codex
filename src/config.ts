@@ -4,26 +4,26 @@ export const appConfig = {
   lighting: {
     night: {
       hemisphere: {
-        skyColor: 0x91a8d6,
-        groundColor: 0x111a2d,
-        intensity: 0.32,
+        skyColor: 0xb3c6ea,
+        groundColor: 0x18253d,
+        intensity: 0.44,
       },
       moon: {
-        color: 0xc8d8ff,
-        intensity: 0.48,
-        position: new THREE.Vector3(6, 8, 14),
+        color: 0xd5e4ff,
+        intensity: 0.72,
+        position: new THREE.Vector3(7, 10, 14),
       },
       ambient: {
-        color: 0x7f96c2,
-        intensity: 0.08,
+        color: 0x97afdb,
+        intensity: 0.2,
       },
       fog: {
-        color: 0x060b16,
-        near: 18,
-        far: 150,
+        color: 0x0d1628,
+        near: 22,
+        far: 170,
       },
       renderer: {
-        clearColor: 0x03060f,
+        clearColor: 0x070d1a,
       },
     },
   },
@@ -91,6 +91,23 @@ export const appConfig = {
         spacingRange: [24, 40],
         yRange: [0.5, 4.5],
       },
+    },
+  },
+  atmosphere: {
+    stars: {
+      count: 340,
+      radius: 210,
+      minY: 24,
+      maxY: 125,
+      size: 1.35,
+      color: 0xdceaff,
+      opacity: 0.9,
+    },
+    speedFog: {
+      nearDrop: 12,
+      farDrop: 44,
+      color: 0x13233f,
+      smoothing: 2.8,
     },
   },
   renderer: {
