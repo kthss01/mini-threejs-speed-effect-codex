@@ -77,9 +77,16 @@ function createRoadTexture(width: number, length: number): THREE.CanvasTexture {
     context.fillRect(centerLineX, top, centerLinePixelWidth, height);
   }
 
+
+  // Edge bleed padding to avoid visible seams when sampling at tile boundaries.
+  const imageDataTop = context.getImageData(0, 0, canvasSize, 1);
+  const imageDataBottom = context.getImageData(0, canvasSize - 1, canvasSize, 1);
+  context.putImageData(imageDataTop, 0, 1);
+  context.putImageData(imageDataBottom, 0, canvasSize - 2);
+
   const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.repeat.set(1, Math.max(1, getRoadRepeat(length, repeatLength)));
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
@@ -121,20 +128,51 @@ function createShoulderGroup(width: number, length: number): THREE.Group {
   return group;
 }
 
+function createSeamDebugLine(width: number): THREE.LineSegments {
+  const halfWidth = width / 2;
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-halfWidth, 0.03, 0),
+    new THREE.Vector3(halfWidth, 0.03, 0),
+  ]);
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff4d4f, transparent: true, opacity: 0.9 });
+  return new THREE.LineSegments(lineGeometry, lineMaterial);
+}
+
+function snapToStrideGrid(value: number, stride: number): number {
+  if (stride <= 0) {
+    return Math.fround(value);
+  }
+
+  const gridIndex = Math.round(value / stride);
+  return Math.fround(gridIndex * stride);
+}
+
 export function createGroundPool(): GroundPool {
   const { tileCount, tileLength, width, recycleZ } = appConfig.ground;
-  const tileOverlap = 1;
+  const tileOverlap = 0;
   const tileStride = tileLength - tileOverlap;
+  const normalizedRecycleZ = snapToStrideGrid(recycleZ, tileStride);
 
   const group = new THREE.Group();
-  const tileGeometry = new THREE.PlaneGeometry(width, tileLength, 1, 8);
+  const tileGeometry = new THREE.PlaneGeometry(width, tileLength, 1, 1);
   const tileMaterial = createGroundMaterial(width, tileLength);
 
   const tiles = Array.from({ length: tileCount }, (_, index) => {
     const tile = new THREE.Mesh(tileGeometry, tileMaterial);
     tile.rotation.x = -Math.PI / 2;
-    tile.position.set(0, 0, -index * tileStride);
+    tile.position.set(0, 0, snapToStrideGrid(-index * tileStride, tileStride));
     tile.add(createShoulderGroup(width, tileLength));
+
+    if (appConfig.debug.showRoadSeams) {
+      const frontSeam = createSeamDebugLine(width);
+      frontSeam.position.z = tileLength / 2;
+      tile.add(frontSeam);
+
+      const backSeam = createSeamDebugLine(width);
+      backSeam.position.z = -tileLength / 2;
+      tile.add(backSeam);
+    }
+
     group.add(tile);
     return tile;
   });
@@ -150,8 +188,8 @@ export function createGroundPool(): GroundPool {
 
       for (const tile of tiles) {
         tile.position.z += effectiveSpeed * delta;
-        if (tile.position.z >= recycleZ) {
-          tile.position.z = furthestBackZ - tileStride;
+        if (tile.position.z >= normalizedRecycleZ) {
+          tile.position.z = snapToStrideGrid(furthestBackZ - tileStride, tileStride);
           furthestBackZ = tile.position.z;
         }
       }
