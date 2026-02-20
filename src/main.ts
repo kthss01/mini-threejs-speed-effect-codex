@@ -14,7 +14,7 @@ import { createVehicleLights } from './world/vehicleLights';
 const container = document.querySelector<HTMLElement>('#app');
 if (!container) throw new Error('Missing #app container');
 
-const { scene, camera, renderer, onResize } = createSceneBundle(container, 'night');
+const { scene, camera, renderer, updateAtmosphere, onResize } = createSceneBundle(container, 'night');
 
 const mapKmhToWorldSpeed = (kmh: number) => {
   const { referenceKmh, referenceWorldSpeed } = appConfig.speed;
@@ -81,12 +81,13 @@ const handleBeforeUnload = () => {
 
 window.addEventListener('beforeunload', handleBeforeUnload);
 
-const loop = createRenderLoop(renderer, scene, camera, (delta) => {
+const loop = createRenderLoop(renderer, scene, camera, (delta, elapsed) => {
   const worldSpeed = speedController.getWorldSpeed();
   const streakBoost = Math.min(3.5, 1 + worldSpeed * 0.08);
   rig.update(delta, worldSpeed, targetTransform);
   vehicleLights.update(camera);
   environment.update(delta, worldSpeed);
+  updateAtmosphere(elapsed, worldSpeed);
   effectsController.update(delta, worldSpeed * streakBoost);
   debug.update();
 });
