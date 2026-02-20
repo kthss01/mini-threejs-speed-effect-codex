@@ -2,6 +2,10 @@
 
 Three.js로 3D 환경에서 **전진 이동 시 주변 환경이 빠르게 지나가며 속도감이 느껴지는** 시네마틱 연출을 구현하는 프로젝트입니다.
 
+codex 를 이용한 three.js speed effect 만들기
+
+![mini-threejs-speed-effect-codex 썸네일](docs/assets/project-thumbnail.svg)
+
 ## 목표
 - 자동차/자전거/오토바이처럼 **앞으로 나아갈 때**:
   - 주변 오브젝트의 **패럴랙스(Parallax)**
